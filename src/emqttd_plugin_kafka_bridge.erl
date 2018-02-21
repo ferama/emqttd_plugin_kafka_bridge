@@ -26,11 +26,14 @@
 %%%-----------------------------------------------------------------------------
 -module(emqttd_plugin_kafka_bridge).
 
--include("../../../include/emqttd.hrl").
+%%-include("../../../include/emqttd.hrl").
+-include_lib("emqttd/include/emqttd.hrl").
 
--include("../../../include/emqttd_protocol.hrl").
+%%-include("../../../include/emqttd_protocol.hrl").
+-include_lib("emqttd/include/emqttd_protocol.hrl").
 
--include("../../../include/emqttd_internal.hrl").
+%%-include("../../../include/emqttd_internal.hrl").
+-include_lib("emqttd/include/emqttd_internal.hrl").
 
 -export([load/1, unload/0]).
 
@@ -66,7 +69,7 @@ on_client_connected(ConnAck, Client = #mqtt_client{client_id  = ClientId}, _Env)
         {cluster_node, node()},
         {ts, emqttd_time:now_to_secs()}
     ]),
-    
+
     ekaf:produce_async_batched(<<"broker_message">>, list_to_binary(Json)),
 
     {ok, Client}.
@@ -102,12 +105,12 @@ on_client_disconnected(Reason, ClientId, _Env) ->
 on_client_subscribe(ClientId, TopicTable, _Env) ->
     io:format("client ~s will subscribe ~p~n", [ClientId, TopicTable]),
     {ok, TopicTable}.
-   
+
 on_client_subscribe_after(ClientId, TopicTable, _Env) ->
     io:format("client ~s subscribed ~p~n", [ClientId, TopicTable]),
-    
+
     case TopicTable of
-        [_|_] -> 
+        [_|_] ->
             %% If TopicTable list is not empty
             Key = proplists:get_keys(TopicTable),
             %% build json to send using ClientId
@@ -119,7 +122,7 @@ on_client_subscribe_after(ClientId, TopicTable, _Env) ->
                 {ts, emqttd_time:now_to_secs()}
             ]),
             ekaf:produce_async_batched(<<"broker_message">>, list_to_binary(Json));
-        _ -> 
+        _ ->
             %% If TopicTable is empty
             io:format("empty topic ~n")
     end,
@@ -143,9 +146,9 @@ on_client_unsubscribe(ClientId, Topics, _Env) ->
         {cluster_node, node()},
         {ts, emqttd_time:now_to_secs()}
     ]),
-    
+
     ekaf:produce_async_batched(<<"broker_message">>, list_to_binary(Json)),
-    
+
     {ok, Topics}.
 
 %%-----------client unsubscribed end----------------------------------------%%
@@ -159,12 +162,12 @@ on_message_publish(Message = #mqtt_message{topic = <<"$SYS/", _/binary>>}, _Env)
     {ok, Message};
 
 on_message_publish(Message, _Env) ->
-    io:format("publish ~s~n", [emqttd_message:format(Message)]),   
+    io:format("publish ~s~n", [emqttd_message:format(Message)]),
 
     From = Message#mqtt_message.from,
-    Sender =  Message#mqtt_message.sender,
+    %%Sender =  Message#mqtt_message.sender,
     Topic = Message#mqtt_message.topic,
-    Payload = Message#mqtt_message.payload, 
+    Payload = Message#mqtt_message.payload,
     QoS = Message#mqtt_message.qos,
     Timestamp = Message#mqtt_message.timestamp,
 
@@ -187,9 +190,9 @@ on_message_delivered(ClientId, Message, _Env) ->
     io:format("delivered to client ~s: ~s~n", [ClientId, emqttd_message:format(Message)]),
 
     From = Message#mqtt_message.from,
-    Sender =  Message#mqtt_message.sender,
+    %%Sender =  Message#mqtt_message.sender,
     Topic = Message#mqtt_message.topic,
-    Payload = Message#mqtt_message.payload, 
+    Payload = Message#mqtt_message.payload,
     QoS = Message#mqtt_message.qos,
     Timestamp = Message#mqtt_message.timestamp,
 
@@ -211,12 +214,12 @@ on_message_delivered(ClientId, Message, _Env) ->
 
 %%-----------acknowledgement publish start----------------------------%%
 on_message_acked(ClientId, Message, _Env) ->
-    io:format("client ~s acked: ~s~n", [ClientId, emqttd_message:format(Message)]),   
+    io:format("client ~s acked: ~s~n", [ClientId, emqttd_message:format(Message)]),
 
     From = Message#mqtt_message.from,
-    Sender =  Message#mqtt_message.sender,
+    %%Sender =  Message#mqtt_message.sender,
     Topic = Message#mqtt_message.topic,
-    Payload = Message#mqtt_message.payload, 
+    Payload = Message#mqtt_message.payload,
     QoS = Message#mqtt_message.qos,
     Timestamp = Message#mqtt_message.timestamp,
 
@@ -268,4 +271,3 @@ unload() ->
     emqttd:unhook('message.publish', fun ?MODULE:on_message_publish/2),
     emqttd:unhook('message.acked', fun ?MODULE:on_message_acked/3),
     emqttd:unhook('message.delivered', fun ?MODULE:on_message_delivered/3).
-
